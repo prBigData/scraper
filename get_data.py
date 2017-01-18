@@ -20,7 +20,7 @@ EXPORT_FILENAME = "AIS_dump.json"
 EXPORT_MMSI_FILENAME = "MMSI_list.json"
 
 # >>> Export folders settings
-EXPORT_FOLDER_PATH = "./dumps2/"
+EXPORT_FOLDER_PATH = "./mmsi_positions/"
 EXPORT_MMSI_FOLDER_PATH = "./mmsi_lists/"
 
 # >>> Checking our script works well
@@ -53,7 +53,10 @@ HEADERS = {'X-Requested-With': 'XMLHttpRequest'}
 # could alternate between different headers to avoid getting banned /!\
 
 # Set a existing conection to cassandra cluster
-cluster = Cluster(cass_settings['CASS_CONNECT_POINTS'], port=cass_settings['CASS_PORT'])
+cluster = Cluster(
+    cass_settings['CASS_CONNECT_POINTS'],
+    port=cass_settings['CASS_PORT']
+)
 session = cluster.connect(keyspace=cass_settings['CASS_KEYSPACE'])
 
 while (True):
@@ -119,7 +122,7 @@ while (True):
                 # Copy of Dictionary for cassandra insertion
                 c = d.copy()
 
-		# Treament on datas to prepare insertion in cass
+                # Treament on datas to prepare insertion in cass
                 del c['init_LAT']
                 del c['init_LONG']
                 c['course_over_ground'] = int(c['COG'])/10
@@ -134,7 +137,9 @@ while (True):
                 del c['LAT']
                 c['longitude'] = c['LONG']
                 del c['LONG']
-                line = """INSERT INTO basic_position JSON '{}';""".format(json.dumps(c))
+                line = """INSERT INTO basic_position JSON '{}';""".format(
+                    json.dumps(c)
+                )
                 print line
                 try:
                     session.execute(line)

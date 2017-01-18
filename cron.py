@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import date, datetime, timedelta
-from mmsi2.spider3 import Spider
+from mmsi.spider import Spider
 
 
 # >>> Logger
