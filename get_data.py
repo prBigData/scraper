@@ -5,6 +5,9 @@ import logging
 
 from datetime import datetime
 
+from cassandra.cluster import Cluster
+
+from cassandra_db.cassandra_settings import cass_settings
 
 # >>> WE LOG EVERYTHING IN THAT FILE
 logging.basicConfig(filename="get_data.log", level=logging.WARNING)
@@ -48,6 +51,10 @@ ZOOM_LVL = "&zoom=8"  # 8 seems a nice value to begin with
 # >>> REQUESTS HEADERS NOT TO GET 403
 HEADERS = {'X-Requested-With': 'XMLHttpRequest'}
 # could alternate between different headers to avoid getting banned /!\
+
+# Set a existing conection to cassandra cluster
+cluster = Cluster(cass_settings['CASS_CONNECT_POINTS'], port=cass_settings['CASS_PORT'])
+session = cluster.connect(keyspace=cass_settings['CASS_KEYSPACE'])
 
 while (True):
 
@@ -108,6 +115,32 @@ while (True):
                     'LAT': str(float(d['init_LAT']) / 600000.),
                     'LONG': str(float(d['init_LONG']) / 600000.),
                 })
+
+                # Copy of Dictionary for cassandra insertion
+                c = d.copy()
+
+		# Treament on datas to prepare insertion in cass
+                del c['init_LAT']
+                del c['init_LONG']
+                c['course_over_ground'] = int(c['COG'])/10
+                del c['COG']
+                c['speed_over_ground'] = int(c['SOG'])
+                del c['SOG']
+                c['heading'] = int(c['HEADING'])
+                del c['HEADING']
+                c['timestamps'] = c['timestamp'][:-7]
+                del c['timestamp']
+                c['latitude'] = c['LAT']
+                del c['LAT']
+                c['longitude'] = c['LONG']
+                del c['LONG']
+                line = """INSERT INTO basic_position JSON '{}';""".format(json.dumps(c))
+                print line
+                try:
+                    session.execute(line)
+                except Exception:
+                    print "Problem"
+                print d
 
                 # if we want to track a vessel by MMSI for debug
                 if d['MMSI'] == LOG_THIS_VESSEL:

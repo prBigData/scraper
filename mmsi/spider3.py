@@ -3,7 +3,10 @@ from lxml import html
 import json
 import logging
 import time
+from datetime import datetime
+from cassandra.cluster import Cluster
 
+from cassandra_db.cassandra_settings import cass_settings
 
 # paths to the info in the doc
 X_PATHS = {
@@ -32,7 +35,6 @@ X_PATHS = {
 
 logging.basicConfig(filename="spider3.log", level=logging.DEBUG)
 
-
 class Spider(object):
     """Our spider class
 
@@ -50,6 +52,11 @@ class Spider(object):
         self.urls = urls
         self.export = export
         self.sleep_delay = sleep_delay
+         
+        # Set a existing conection to cassandra cluster
+        cluster = Cluster(cass_settings['CASS_CONNECT_POINTS'], port=cass_settings['CASS_PORT'])
+        self.session = cluster.connect(keyspace=cass_settings['CASS_KEYSPACE'])
+
 
     def scrap(self):
         """makes the requests, stores the responses, parse it
@@ -105,6 +112,14 @@ class Spider(object):
 
                 # append new vessel to list
                 vessels_list.append(vessel)
+
+                # Adding infos in database
+                cassandra_request = """INSERT INTO {}.basic_destination (mmsi, timestamps, destination) VALUES ('{}', '{}', '{}')"""      
+                cassandra_request = cassandra_request.format(cass_settings['CASS_KEYSPACE'], vessel['MMSI'], str(datetime.now())[:-7], vessel['DESTINATION'])
+                try:
+                    self.session.execute(cassandra_request)
+                except Exception as e:
+                    logging.info("Failed query : "+ cassandra_request)
 
                 # then try to write the export file
                 try:
